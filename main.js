@@ -42,9 +42,8 @@ const getModel = (data) => {
         notSpamFeatures: table.notSpam,
         numberOfSpams: table.totalSpam,
         numberOfNotSpams: table.totalNotSpam,
-        frequency: R.zipWith(R.add, table.spam, table.notSpam),
-        primeSpam: table.totalSpam/R.length(data),
-        primeNotSpam: table.totalNotSpam/R.length(data)
+        priorSpam: table.totalSpam/R.length(data),
+        priorNotSpam: table.totalNotSpam/R.length(data)
     }
 }
 
@@ -70,15 +69,19 @@ const toPercent = (number) => {
     return `${Math.round(number * 100)}%`
 }
 
+const calc = (a, b) => {
+    return b / (a+b)
+}
 const predictLabels = (data, testData) => {
     let model = getModel(data)
+    // console.log(R.zipWith(calc, model.spamFeatures, model.notSpamFeatures))
     return R.map((testCase) => {
         let totalNumber = model.numberOfNotSpams + model.numberOfSpams
         let pSpam = R.reduce(R.multiply, 1, getProbabilities(testCase, model, "spam"))
         let pNotSpam = R.reduce(R.multiply, 1, getProbabilities(testCase, model, "notSpam"))
-        let denominator = pSpam * model.primeSpam + pNotSpam * model.primeNotSpam
-        let mightBeSpam = (pSpam * model.primeSpam) / denominator
-        let mightBeNotSpam = (pNotSpam * model.primeNotSpam) / denominator
+        let denominator = pSpam * model.priorSpam + pNotSpam * model.priorNotSpam
+        let mightBeSpam = (pSpam * model.priorSpam) / denominator
+        let mightBeNotSpam = (pNotSpam * model.priorNotSpam) / denominator
         let label = (mightBeNotSpam > mightBeSpam) ? " Not spam" : " Spam    "
         return `${testCase.join(",")} ${label}      ${toPercent(mightBeSpam)}    ${toPercent(mightBeNotSpam)}` 
     }, testData)
